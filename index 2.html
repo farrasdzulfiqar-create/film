@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nonton Film - TMDB</title>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #2a2a2a;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #e50914;
+            letter-spacing: 1px;
+        }
+
+        .header h1 span {
+            color: #ffffff;
+            font-weight: 300;
+            font-size: 1rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Search Bar */
+        .search-section {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-section input {
+            flex: 1;
+            min-width: 250px;
+            padding: 0.9rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+
+        .search-section input:focus {
+            border-color: #e50914;
+        }
+
+        .search-section button {
+            padding: 0.9rem 2rem;
+            border: none;
+            border-radius: 8px;
+            background-color: #e50914;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-section button:hover {
+            background-color: #f6121d;
+        }
+
+        .search-section button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Loading & Error */
+        .status-msg {
+            text-align: center;
+            padding: 3rem;
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+
+        .error-msg {
+            color: #ff6b6b;
+        }
+
+        /* Movie Grid */
+        .movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Movie Card */
+        .movie-card {
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(229, 9, 20, 0.3);
+        }
+
+        .movie-card img {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            display: block;
+            background-color: #2a2a2a;
+        }
+
+        .movie-card .no-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            background-color: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .movie-card .info {
+            padding: 0.8rem;
+        }
+
+        .movie-card .info h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.3rem;
+        }
+
+        .movie-card .info .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .movie-card .info .meta .rating {
+            color: #f5c518;
+            font-weight: 600;
+        }
+
+        /* Modal Detail */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 1.5rem;
+        }
+
+        .modal-content {
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            padding: 2rem;
+        }
+
+        .modal-content .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1.2rem;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-content .close-btn:hover {
+            color: #e50914;
+        }
+
+        .modal-body {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .modal-body img {
+            width: 200px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .modal-body .detail-text {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .modal-body .detail-text h2 {
+            font-size: 1.6rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-body .detail-text .tagline {
+            color: #aaa;
+            font-style: italic;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .modal-body .detail-text .overview {
+            line-height: 1.7;
+            color: #ccc;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-body .detail-text .stats {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .modal-body .detail-text .stats span {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+            .movie-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 1rem;
+            }
+            .modal-body img {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div x-data="movieApp()" x-init="fetchPopular()">
+    <!-- Header -->
+    <header class="header">
+        <h1>NONTON<span>FILM</span></h1>
+    </header>
+
+    <div class="container">
+        <!-- Search Section -->
+        <div class="search-section">
+            <input
+                type="text"
+                placeholder="Cari film..."
+                x-model="searchQuery"
+                @keyup.enter="searchMovies()"
+            >
+            <button @click="searchMovies()" :disabled="isLoading">
+                <span x-show="!isLoading">Cari</span>
+                <span x-show="isLoading">Mencari...</span>
+            </button>
+            <button @click="resetToPopular()" x-show="isSearchMode" style="background-color: #333;">
+                Kembali ke Populer
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="isLoading" class="status-msg">
+            ⏳ Memuat data film...
+        </div>
+
+        <!-- Error State -->
+        <div x-show="errorMsg && !isLoading" class="status-msg error-msg">
+            <span x-text="errorMsg"></span>
+        </div>
+
+        <!-- Movie Grid -->
+        <div x-show="!isLoading && !errorMsg && movies.length > 0" class="movie-grid">
+            <template x-for="movie in movies" :key="movie.id">
+                <div class="movie-card" @click="showDetail(movie.id)">
+                    <template x-if="movie.poster_path">
+                        <img :src="'https://image.tmdb.org/t/p/w500' + movie.poster_path" :alt="movie.title">
+                    </template>
+                    <template x-if="!movie.poster_path">
+                        <div class="no-poster">No Poster</div>
+                    </template>
+                    <div class="info">
+                        <h3 x-text="movie.title || movie.name"></h3>
+                        <div class="meta">
+                            <span x-text="(movie.release_date || movie.first_air_date || '').split('-')[0]"></span>
+                            <span class="rating">⭐ <span x-text="movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A'"></span></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="!isLoading && !errorMsg && movies.length === 0" class="status-msg">
+            Tidak ada film ditemukan.
+        </div>
+    </div>
+
+    <!-- Modal Detail -->
+    <div x-show="selectedMovie" class="modal-overlay" @click.self="selectedMovie = null" x-cloak>
+        <div class="modal-content">
+            <button class="close-btn" @click="selectedMovie = null">&times;</button>
+            <div class="modal-body" x-show="selectedMovie">
+                <template x-if="selectedMovie && selectedMovie.poster_path">
+                    <img :src="'https://image.tmdb.org/t/p/w500' + selectedMovie.poster_path" :alt="selectedMovie.title">
+                </template>
+                <div class="detail-text">
+                    <h2 x-text="selectedMovie.title || selectedMovie.name"></h2>
+                    <p class="tagline" x-text="selectedMovie.tagline"></p>
+                    <p class="overview" x-text="selectedMovie.overview || 'Tidak ada sinopsis.'"></p>
+                    <div class="stats">
+                        <div>Rating: <span x-text="selectedMovie.vote_average ? selectedMovie.vote_average.toFixed(1) : 'N/A'"></span></div>
+                        <div>Rilis: <span x-text="selectedMovie.release_date || selectedMovie.first_air_date || '-'"></span></div>
+                        <div>Durasi: <span x-text="selectedMovie.runtime ? selectedMovie.runtime + ' min' : '-'"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div x-show="!selectedMovie" class="status-msg">Memuat detail...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function movieApp() {
+        return {
+            // === KONFIGURASI API ===
+            apiKey: 'fac0118f87fc654eaeb366d03a02096d', // Kunci API dari user
+            baseUrl: 'https://api.themoviedb.org/3',
+            
+            // === STATE ===
+            movies: [],
+            isLoading: false,
+            errorMsg: '',
+            searchQuery: '',
+            isSearchMode: false,
+            selectedMovie: null,
+
+            // === METHOD: Ambil Film Populer ===
+            async fetchPopular() {
+                this.isLoading = true;
+                this.errorMsg = '';
+                this.isSearchMode = false;
+                this.movies = [];
+                this.searchQuery = '';
+
+                try {
+                    const url = `${this.baseUrl}/movie/popular?api_key=${this.apiKey}&language=id-ID&page=1`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.results) {
+                        this.movies = data.results;
+                    } else {
+                        this.errorMsg = 'Gagal memuat data film populer.';
+                    }
+                } catch (error) {
+                    console.error('Error fetching popular:', error);
+                    this.errorMsg = 'Terjadi kesalahan saat memuat data. Periksa koneksi internet atau API key.';
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            // === METHOD: Cari Film ===
+            async searchMovies() {
+                const query = this.searchQuery.trim();
+                if (!query) {
+                    this.errorMsg = 'Masukkan kata kunci pencarian.';
+                    return;
+                }
+
+                this.isLoading = true;
+                this.errorMsg = '';
+                this.isSearchMode = true;
+                this.movies = [];
+
+                try {
+                    const url = `${this.baseUrl}/search/movie?api_key=${this.apiKey}&language=id-ID&query=${encodeURIComponent(query)}&page=1`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.results) {
+                        this.movies = data.results;
+                        if (this.movies.length === 0) {
+                            this.errorMsg = `Film dengan kata kunci "${query}" tidak ditemukan.`;
+                        }
+                    } else {
+                        this.errorMsg = 'Gagal melakukan pencarian.';
+                    }
+                } catch (error) {
+                    console.error('Error searching:', error);
+                    this.errorMsg = 'Terjadi kesalahan saat mencari film.';
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+
+            // === METHOD: Kembali ke Populer ===
+            resetToPopular() {
+                this.fetchPopular();
+            },
+
+            // === METHOD: Tampilkan Detail Film ===
+            async showDetail(movieId) {
+                // Set placeholder dulu agar modal terbuka dan menampilkan loading
+                this.selectedMovie = { id: movieId, title: 'Memuat...' };
+
+                try {
+                    const url = `${this.baseUrl}/movie/${movieId}?api_key=${this.apiKey}&language=id-ID`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    this.selectedMovie = data;
+                } catch (error) {
+                    console.error('Error fetching detail:', error);
+                    // Jika gagal, tetap tampilkan data minimal dari list
+                    const fallback = this.movies.find(m => m.id === movieId);
+                    this.selectedMovie = fallback || { title: 'Gagal memuat detail', overview: 'Silakan coba lagi.' };
+                }
+            }
+        };
+    }
+</script>
+
+</body>
+</html>
